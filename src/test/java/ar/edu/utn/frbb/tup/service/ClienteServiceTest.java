@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 
@@ -26,6 +25,7 @@ public class ClienteServiceTest {
 
     @Mock
     private ClienteDao clienteDao;
+    
 
     @InjectMocks
     private ClienteService clienteService;
@@ -126,6 +126,104 @@ public class ClienteServiceTest {
     }
 
     //Agregar una CA$ y CC$ --> success 2 cuentas, titular peperino
+    @Test
+    public void testAgregarCuenta_CA$_y_CC$() throws TipoCuentaAlreadyExistsException {
+        Cliente cliente = new Cliente();
+        cliente.setDni(4567891);
+        cliente.setNombre("Pepe");
+        cliente.setApellido("Rino");
+        cliente.setFechaNacimiento(LocalDate.of(1978, 3,25));
+        cliente.setTipoPersona(TipoPersona.PERSONA_FISICA);
+
+        Cuenta cuentaCA = new Cuenta()
+        .setMoneda(TipoMoneda.PESOS)
+        .setBalance(0)
+        .setTipoCuenta(TipoCuenta.CAJA_AHORRO);
+
+        Cuenta cuentaCAU = new Cuenta()
+        .setMoneda(TipoMoneda.PESOS)
+        .setBalance(0)
+        .setTipoCuenta(TipoCuenta.CUENTA_CORRIENTE);
+
+        when(clienteDao.find(4567891, true)).thenReturn(cliente);
+
+        clienteService.agregarCuenta(cuentaCA, cliente.getDni());
+        clienteService.agregarCuenta(cuentaCAU, cliente.getDni());
+
+        assertEquals(2, cliente.getCuentas().size());
+        assertTrue(cliente.getCuentas().contains(cuentaCA));
+        assertTrue(cliente.getCuentas().contains(cuentaCAU));
+        assertEquals(cliente, cuentaCA.getTitular());
+        assertEquals(cliente, cuentaCAU.getTitular());
+
+        verify(clienteDao, times(2)).save(cliente);
+
+    }
     //Agregar una CA$ y CAU$S --> success 2 cuentas, titular peperino...
-    //Testear clienteService.buscarPorDni
+    @Test
+    public void testAgregarCuenta_CA$_y_CAU$() throws TipoCuentaAlreadyExistsException {
+        Cliente cliente = new Cliente();
+        cliente.setDni(4567891);
+        cliente.setNombre("Juan");
+        cliente.setApellido("Perez");
+        cliente.setFechaNacimiento(LocalDate.of(1990, 2,2));
+        cliente.setTipoPersona(TipoPersona.PERSONA_FISICA);
+
+        Cuenta cuentaCA = new Cuenta()
+        .setMoneda(TipoMoneda.PESOS)
+        .setBalance(0)
+        .setTipoCuenta(TipoCuenta.CAJA_AHORRO);
+
+        Cuenta cuentaCAU = new Cuenta()
+        .setMoneda(TipoMoneda.DOLARES)
+        .setBalance(0)
+        .setTipoCuenta(TipoCuenta.CAJA_AHORRO);
+
+        when(clienteDao.find(4567891, true)).thenReturn(cliente);
+
+        clienteService.agregarCuenta(cuentaCA, cliente.getDni());
+        clienteService.agregarCuenta(cuentaCAU, cliente.getDni());
+
+        assertEquals(2, cliente.getCuentas().size());
+        assertTrue(cliente.getCuentas().contains(cuentaCA));
+        assertTrue(cliente.getCuentas().contains(cuentaCAU));
+        assertEquals(cliente, cuentaCA.getTitular());
+        assertEquals(cliente, cuentaCAU.getTitular());
+
+        verify(clienteDao, times(2)).save(cliente);
+        
+
+    }
+
+    //Testear clienteService.buscarPorDni con EXITO
+    @Test
+    public void testBuscarDNIcon_exito(){
+        Cliente cliente = new Cliente();
+        cliente.setDni(4567891);
+        cliente.setNombre("Juan");
+        cliente.setApellido("Perez");
+        cliente.setFechaNacimiento(LocalDate.of(1990, 2,2));
+
+        when(clienteDao.find(4567891, true)).thenReturn(cliente);
+
+        Cliente clienteEncontrado = clienteService.buscarClientePorDni(4567891);
+        assertNotNull(clienteEncontrado);
+        assertEquals(cliente, clienteEncontrado);
+
+    }
+
+    //Testear clienteService.buscarPorDni con FALLA
+    @Test
+    public void testBuscarDNIcon_falla(){
+        when(clienteDao.find(87654321, true)).thenReturn(null);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            clienteService.buscarClientePorDni(87654321);
+        });
+
+        String expectedMessage = "El cliente no existe";
+        String actualMessage = exception.getMessage();
+        assertTrue(actualMessage.contains(expectedMessage));
+    }
+
 }
